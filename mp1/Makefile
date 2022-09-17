@@ -54,7 +54,7 @@ clean :
 #dependency is checked, if its name matches this pattern, this rule is used. You can also use the % 
 #in your list of dependencies, and it will insert whatever characters were matched for the target name.
 obj/%.o: src/%.cpp
-	$(CXX) $(COMPILERFLAGS) -c -o $@ $<
+	$(CXX) $(COMPILERFLAGS) -o $@ $<
 obj:
 	mkdir -p obj
 
