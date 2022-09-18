@@ -6,8 +6,12 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <fstream>
+#include <chrono>
+
 using namespace std;
-#define BUFFER_SIZE 128
+#define BUFFER_SIZE 4096
+
+struct timeval timeout={3,0};
 
 int main(int argc, char** argv) {
     struct sockaddr_in saddr;
@@ -71,9 +75,9 @@ int main(int argc, char** argv) {
         return -1;
     }
     printf("The Socket is now connected\n");
-
+    setsockopt(sd,SOL_SOCKET,SO_RCVTIMEO,(char*)&timeout,sizeof(struct timeval));
     printf("Let us sleep before we start sending data\n");
-    sleep(1);
+    //sleep(1);
 
     /* Next step: send some data */
     cout<<"sizeof(cquery) is: "<<sizeof(cquery)<<endl;
@@ -89,12 +93,14 @@ int main(int argc, char** argv) {
     string finalResult = "";
 
     while ((tmp = recv(sd, buffer, sizeof(buffer), 0)) && tmp > 0) {
+        //cout<<"tmp="<<tmp<<endl;
         //if (tmp==-1) break;
         if (tmp > 0) {
             //printf("Bytes received: %d\n", tmp);
         }
         else if (tmp == 0) {
             printf("Connection closed\n");
+            break;
         }//9-11
         else {
             printf("recv failed: %s\n", strerror(errno));//9-11
@@ -103,13 +109,13 @@ int main(int argc, char** argv) {
 
         finalResult += buffer;
 
-        if (tmp == -1 || (tmp == 2 && (int)buffer[0] == 32 && (int)buffer[1] == 0)) {
+        if (tmp == -1 || (tmp == 2 && (int)buffer[0] == 32 && (int)buffer[1] == 0)) {//
             //We define a rule, the last time we send from server a char array with length of 2, a space and a NULL.
             //ASCII of space is 32, ASCII of NULL is 0, so if we receive this pattern, we know it's the last message.
             break;
         }
     }
-    printf(finalResult.c_str());
+    //printf(finalResult.c_str());
 
     ofstream outfile;
     outfile.open("output");

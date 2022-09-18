@@ -20,7 +20,7 @@ using namespace std;
 
 //TODO: To check when DATA_BUFFER_SIZE is exceeded, whether bad thing will happen
 #define DATA_BUFFER_SIZE 5000
-#define BUFFER_SIZE 128
+#define BUFFER_SIZE 4096
 #define MAX_CONNECTIONS 10
 enum {
     RESULT_NORMAL,
@@ -118,6 +118,8 @@ string return_file(const char* s,int fd){
     }
 
     if(words[0]=="GET"){
+        long long byte_count=0;
+        cout<<"first word is GET"<<endl;
         string file_directory_str(words[1],1);
         fp = fopen(file_directory_str.c_str(), "r");
         if (fp == NULL) {
@@ -127,20 +129,38 @@ string return_file(const char* s,int fd){
             return strerror(errno);
         }
         const char* ok_msg="HTTP/1.1 200 OK\r\n\r\n";
+        cout<<"ok msg is HTTP/1.1 200 OK"<<endl;
         int ok_msg_return_result=send(fd,ok_msg,strlen(ok_msg),0);
+        cout<<"ok_msg_return_result="<<ok_msg_return_result<<endl;
+        if(ok_msg_return_result==0){
+            cout<<"ok msg sent successfully"<<endl;
+        }
+
         //int blank_line_return_result=send(fd,"\r\n",strlen("\r\n"),0);
         while (fgets(buffer, sizeof(buffer), (FILE*)fp)) {
             ret_val_grep_result=send(fd,buffer,sizeof(buffer),0);
+            byte_count+=ret_val_grep_result;
+            //cout<<"Sent:"<<buffer<<endl;
             result += buffer;//.data();
             count++;
         }
-
+        cout<<"total byte sent:"<<byte_count<<endl;
+        cout<<"ret_val_grep_result="<<ret_val_grep_result<<endl;
+        if(ret_val_grep_result==0){
+            cout<<"request content sent successfully"<<endl;
+        }
         char null_buffer[2]=" ";
         //sleep(1);
         ret_val_grep_result=send(fd,null_buffer,sizeof(null_buffer),0);
+        if(ret_val_grep_result==0){
+            cout<<"final byte sent successfully"<<endl;
+        }
     }else{
         const char* bad_request_msg="400 Not Found\r\n\r\n";
         int bad_request_msg_return_result=send(fd,bad_request_msg,strlen(bad_request_msg),0);
+        if(bad_request_msg_return_result==0){
+            cout<<"400 Not Found. sent successfully"<<endl;
+        }
     }
 
     return result;
