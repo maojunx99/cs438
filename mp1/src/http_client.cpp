@@ -38,11 +38,17 @@ int main(int argc, char** argv) {
         }
     }
     if (num1 == 2) {
-        port = str.substr(add1 + 1, add2 - add1);
+        port = str.substr(add1 + 1, add2 - add1-1);
     }
     file = str.substr(add2);
     query = "GET " + file + " HTTP/1.1\r\n\r\n";
-    ip = str.substr(7, add2 - 7);
+    if (num1 == 1) {
+        ip = str.substr(7, add2 - 7);//have port
+    }
+    else {
+        ip = str.substr(7, add1 - 7);
+    }
+    
 
     /* Step1: create a TCP socket */
     sd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
