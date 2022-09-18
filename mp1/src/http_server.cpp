@@ -121,9 +121,14 @@ string return_file(const char* s,int fd){
         string file_directory_str(words[1],1);
         fp = fopen(file_directory_str.c_str(), "r");
         if (fp == NULL) {
+            const char* notfound_msg="HTTP/1.1 404 Not Found\r\n\r\n";
+            int notfound_msg_return_result=send(fd,notfound_msg,strlen(notfound_msg),0);
             fprintf(stderr, "can't open %s: %s\n", file_directory_str.c_str(), strerror(errno));
             return strerror(errno);
         }
+        const char* ok_msg="HTTP/1.1 200 OK\r\n\r\n";
+        int ok_msg_return_result=send(fd,ok_msg,strlen(ok_msg),0);
+        //int blank_line_return_result=send(fd,"\r\n",strlen("\r\n"),0);
         while (fgets(buffer, sizeof(buffer), (FILE*)fp)) {
             ret_val_grep_result=send(fd,buffer,sizeof(buffer),0);
             result += buffer;//.data();
@@ -133,6 +138,9 @@ string return_file(const char* s,int fd){
         char null_buffer[2]=" ";
         //sleep(1);
         ret_val_grep_result=send(fd,null_buffer,sizeof(null_buffer),0);
+    }else{
+        const char* bad_request_msg="400 Not Found\r\n\r\n";
+        int bad_request_msg_return_result=send(fd,bad_request_msg,strlen(bad_request_msg),0);
     }
 
     return result;
