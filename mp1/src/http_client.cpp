@@ -98,11 +98,13 @@ int main(int argc, char** argv) {
     outfile.open("output");
     FILE* fp = fopen("output", "w");
     while (true) {
-        recv(sd, &tc, 1, 0);
-        if (tc == '\n') {
-            count++;
+        if (count < 2) {
+            recv(sd, &tc, 1, 0);
+            if (tc == '\n') {
+                count++;
+            }
+            continue;
         }
-        if (count < 2)continue;
         //if (tmp==-1) break;
         tmp = recv(sd, buffer, BUFFER_SIZE, 0);
         if(tmp <= 0) {
