@@ -3,7 +3,6 @@ COMPILERFLAGS = -g -Wall -Wextra -Wno-sign-compare
 
 #Any libraries you might need linked in.
 #LINKLIBS = -lm
-LINKLIBS = -lpthread
 
 #The components of each program. When you create a src/foo.c source file, add obj/foo.o here, separated
 #by a space (e.g. SOMEOBJECTS = obj/foo.o obj/bar.o obj/baz.o).
