@@ -48,12 +48,12 @@ void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
         exit(1);  
     }  
      
-    int len;  
+    //int len;  
     memset(&si_me, 0, sizeof(struct sockaddr_in));
     si_me.sin_family = AF_INET;
     si_me.sin_port = htons(myUDPport);
     si_me.sin_addr.s_addr = htonl(INADDR_ANY); 
-    len = sizeof(si_me);  
+    //len = sizeof(si_me);  
         
     if(bind(sock_fd, (struct sockaddr *)&si_me, sizeof(si_me)) < 0)  
     {  
@@ -62,7 +62,7 @@ void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
     }  
     int recv_num;
     int send_num;
-    char send_buf[20] = "ack";  
+    //char send_buf[20] = "ack";  
     char recv_buf[DATA_BUFFER_SIZE];  
 	/* Now receive data and send acknowledgements */    
     printf("server: waiting for connections...\n");
@@ -76,8 +76,8 @@ void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
     //ofstream outfile;  
     FILE* fp = fopen(destinationFile, "wb");
     //outfile.open(destinationFile);
-    int seqNum, dataLen;
-    char data[DATA_BUFFER_SIZE];
+    //int seqNum, dataLen;
+    //char data[DATA_BUFFER_SIZE];
     char ackNum_char[20];
 	while(1) { 
         Packet* curPacket = (Packet*) malloc(sizeof(Packet));
@@ -126,6 +126,7 @@ void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
     close(sock_fd);
 	printf("%s received.", destinationFile);
     return;
+
 }
 
 /*

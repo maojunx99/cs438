@@ -1,6 +1,6 @@
 /* 
  * File:   sender_main.cpp
- * Author: 
+ * Author: Pengcheng Xu
  *
  * Created on 
  */
@@ -21,7 +21,6 @@
 #include <sys/time.h>
 #include <netdb.h>
 #include <math.h>
-
 #include <iostream>
 #include <deque>
 #define PACKET_ID_SIZE 4
@@ -402,10 +401,10 @@ void reliablyTransfer(char* hostname,char*  hostUDPport /*unsigned short int hos
     }
 
     if ((s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1){
-        diep("socket");
+        char *errorMsg =const_cast<char*>("Socket Error");
+        diep(errorMsg);
     }
-        
-
+    
     /*
     memset((char *) &si_other, 0, sizeof (si_other));
     si_other.sin_family = AF_INET;
@@ -438,14 +437,14 @@ void reliablyTransfer(char* hostname,char*  hostUDPport /*unsigned short int hos
  */
 int main(int argc, char** argv) {
 
-    unsigned short int udpPort;
+    //unsigned short int udpPort;
     unsigned long long int numBytes;
 
     if (argc != 5) {
         fprintf(stderr, "usage: %s receiver_hostname receiver_port filename_to_xfer bytes_to_xfer\n\n", argv[0]);
         exit(1);
     }
-    udpPort = (unsigned short int) atoi(argv[2]);
+    //udpPort = (unsigned short int) atoi(argv[2]);
     numBytes = atoll(argv[4]);
 
     reliablyTransfer(argv[1], argv[2], argv[3], numBytes);
