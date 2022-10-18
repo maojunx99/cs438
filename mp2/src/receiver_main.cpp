@@ -20,7 +20,7 @@
 #include <unordered_map>
 using namespace std;
 
-#define DATA_BUFFER_SIZE 1024
+#define DATA_BUFFER_SIZE 8192
 #define SEQ_SIZE 4
 #define DATA_LENGTH 4
 
