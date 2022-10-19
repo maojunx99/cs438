@@ -99,7 +99,8 @@ void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
         if (curPacket->seqNum >= nextPacketNum
                 && hashMap.find(curPacket->seqNum) == hashMap.end()) {
             hashMap.insert({curPacket->seqNum, curPacket});
-        } 
+        }else{free(curPacket)};
+        curPacket = nullptr; 
 
         while(hashMap.find(nextPacketNum) != hashMap.end()){
             Packet *tempPacket = hashMap.at(nextPacketNum);
