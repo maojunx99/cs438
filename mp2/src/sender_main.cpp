@@ -23,24 +23,26 @@
 #include <math.h>
 #include <iostream>
 #include <deque>
-#define PACKET_ID_SIZE 4
-#define CONTENT_LEN_SIZE 4
-#define SLOW_START_INIT_SIZE 4
-#define SENDER_BUFFER_SIZE 1024
-#define RECV_BUFFER_SIZE 1024
-#define CONTENT_SIZE 1016
-#define SOCKET_TIMEOUT_MILLISEC 50
-#define SOCKET_TIMEOUT_MICROSEC SOCKET_TIMEOUT_MILLISEC * 1000
-#define SS_THRESHOLD 128
+#include <chrono>
+#include <sstream>
+#include <fstream>
+#include <unordered_map>
+#include "sender.h"
 
-#define DEBUG_LOG 0
-#define DEBUG_LOAD_PACKET 0 && DEBUG_LOG
-
-#define DEBUG_PACKET_TRAFFIC 1 && DEBUG_LOG
 using namespace std;
+
 enum SenderAction {sendNew, resend, waitACK };
 struct sockaddr_in si_other;
 int s, slen;
+string ltos(long l){
+    ostringstream os;
+    os<<l;
+    string result;
+    istringstream is(os.str());
+    is>>result;
+    return result;
+
+}
 void diep(char *s) {
     perror(s);
     exit(1);
@@ -194,8 +196,14 @@ class ReliableSender {
     int ssthresh_;
     int leftPacketId_;  // the left side of the sliding window, should be the next ACK id
     int dupACKCount_;
+    long estimatedRTT_;
+    long sampleRTT_;
+    long devRTT_;
+    long timeoutVal_nanosec_;
     SenderAction nextAction_;
-
+    unordered_map<int,long> send_timestamp_;//chrono::high_resolution_clock::time_point
+    unordered_map<int,long> recv_timestamp_;
+    unordered_map<int,long> RTT_timestamp_;
     ReliableSender(FILE *fp, unsigned long long numBytesToTransfer, int socket,
             struct addrinfo *receiverInfo) {
         fp_ = fp;
@@ -204,6 +212,12 @@ class ReliableSender {
 
         windowSize_ = SLOW_START_INIT_SIZE;
         ssthresh_ = SS_THRESHOLD;
+        
+        if(TO_INIT_RTT){
+            estimatedRTT_=1000000*INITIAL_RTT_MILLISEC;
+            sampleRTT_=1000000*INITIAL_RTT_MILLISEC;
+        }
+        devRTT_=0;
         timeoutVal_.tv_sec = 0;
         timeoutVal_.tv_usec = SOCKET_TIMEOUT_MICROSEC;
         
@@ -230,11 +244,22 @@ class ReliableSender {
             printf("Now sending packet %d\n", packet->id());
         }
         packet->initData(sendBuffer_);
+        /*record send time*/
+        auto sendPacketTime = chrono::high_resolution_clock::now();
+        auto sendPacketTime_nanosec = sendPacketTime.time_since_epoch();
+        //sendPacketTime_nanosec.count();
+        send_timestamp_[packet->id()]=sendPacketTime_nanosec.count();
+        //printf("Packet%d send time: %ld",packet->id(),send_timestamp_[packet->id()]);
+        if(DEBUG_RTT_LOG){
+            cout<<"Packet"<<packet->id()<<"send time: "<<send_timestamp_[packet->id()]<<endl;
+        }
+        
         sentBytes = sendto(socket_, sendBuffer_, SENDER_BUFFER_SIZE, 0,
                 receiverInfo_->ai_addr, receiverInfo_->ai_addrlen);
         if (sentBytes == -1) {
             perror("Fail to send packet");
         }
+        
         return sentBytes;
     }
 
@@ -262,6 +287,7 @@ class ReliableSender {
     int getACKId() {
         
         int recvBytes = recvfrom(socket_, recvBuffer_, RECV_BUFFER_SIZE, 0, NULL, NULL);
+        
         if (recvBytes < 0) {
             return -1;  // timeout
         } else if (recvBytes <  PACKET_ID_SIZE) {
@@ -291,7 +317,48 @@ class ReliableSender {
             }
             setSocketTimeout();//set time out
             int ackId = getACKId();
+            /*record recv time*/
+            auto recvPacketTime = chrono::high_resolution_clock::now();
+            auto recvPacketTime_nanosec = recvPacketTime.time_since_epoch();
+            //recvacketTime_nanosec.count();
+            recv_timestamp_[ackId]=recvPacketTime_nanosec.count();
+            //printf("Packet%d recv time: %ld",ackId,recv_timestamp_[ackId]);
+            
+            
+            RTT_timestamp_[ackId]=(recvPacketTime_nanosec.count() - send_timestamp_[ackId]);
+            //printf("Packet%d RTT: %ld",ackId,RTT_timestamp_[ackId]);
+            
 
+            if(ackId>=0 && RTT_timestamp_[ackId]<1000000*RTT_UPPER_BOUND_MILLI_SECOND){
+                /*if(TO_INIT_RTT && RTT_timestamp_[ackId]<1000*RTT_UPPER_BOUND_MICRO_SECOND){
+                    sampleRTT_=RTT_timestamp_[ackId];
+                }else if (!TO_INIT_RTT && RTT_timestamp_[ackId]<1000*RTT_UPPER_BOUND_MICRO_SECOND){
+                    sampleRTT_=RTT_timestamp_[ackId];
+                }*/
+                sampleRTT_=RTT_timestamp_[ackId];                
+            }
+            /*estimatedRTT_ = (1-ALPHA)*estimatedRTT_ + ALPHA*sampleRTT_;
+            devRTT_ = (1-BETA)*devRTT_ + BETA*abs(sampleRTT_ - estimatedRTT_);
+            timeoutVal_nanosec_ = estimatedRTT_ + 4*devRTT_;*/
+            estimatedRTT_ = (ALPHA)*estimatedRTT_ + (1-ALPHA)*sampleRTT_;
+            devRTT_ = (BETA)*devRTT_ + (1-BETA)*abs(sampleRTT_ - estimatedRTT_);
+            
+            timeoutVal_nanosec_ = estimatedRTT_ + 4*devRTT_;
+            if(timeoutVal_nanosec_/1000000<TIMEOUT_UPPER_BOUND_MILLI_SECOND){
+                timeoutVal_.tv_sec = timeoutVal_nanosec_/1000000000;//s
+                timeoutVal_.tv_usec =(timeoutVal_nanosec_-timeoutVal_.tv_sec*1000000000)/1000;//us
+            }
+           
+            if(DEBUG_RTT_LOG){
+                cout<<"Packet"<<ackId<<"recv time: "<<recv_timestamp_[ackId]<<endl;
+                cout<<"Packet"<<ackId<<"RTT time: "<<RTT_timestamp_[ackId]<<endl;
+                cout<<"estimatedRTT = (1-ALPHA)*estimatedRTT_ + ALPHA*sampleRTT_="<<estimatedRTT_<<endl;
+                cout<<"devRTT_ = (1-BETA)*devRTT_ + BETA*abs(sampleRTT_ - estimatedRTT_)= "<<devRTT_<<endl;
+                cout<<"timeoutVal_nanosec_ = estimatedRTT_ + 4*devRTT_= "<<timeoutVal_nanosec_<<endl;
+                cout<<"timeoutVal_="<<timeoutVal_.tv_sec<<"s+"<<timeoutVal_.tv_usec<<"us"<<endl;
+            }
+            
+            //timeoutVal_.
             if (DEBUG_LOG) {
                 printf("DEBUG: receive ACK %d\n", ackId);
             }
@@ -326,7 +393,7 @@ void CongestionAvoid::dupACK() {
         selfSenderInfo_->dupACKCount_++;
         selfSenderInfo_->nextAction_ = waitACK;
         if (selfSenderInfo_->dupACKCount_ >= dupACK_threshold) {
-            selfSenderInfo_->ssthresh_ = round(selfSenderInfo_->windowSize_ / 2) + 1;
+            selfSenderInfo_->ssthresh_ = round(selfSenderInfo_->windowSize_ / 2) + ADD_WINDOW_SIZE_WHEN_HALF;
             selfSenderInfo_->windowSize_ = selfSenderInfo_->ssthresh_ + dupACK_threshold;
             selfSenderInfo_->nextAction_ = resend;
             FastRecovery *fastRecoveryState = new FastRecovery(selfSenderInfo_);
@@ -415,13 +482,20 @@ void reliablyTransfer(char* hostname,char*  hostUDPport /*unsigned short int hos
         exit(1);
     }*/
 
-
+    
+    //ofstream fout;           //create ofstream
+    char* logFileName=strcat(filename, "output.log" );
+    //fout.open(filename);   //connect a file
+    ofstream file(logFileName);
+    streambuf *x = cout.rdbuf( file.rdbuf( ) );
+    
     ReliableSender sender(fp, bytesToTransfer, s, serverInfo);
     SlowStart *currentState = new SlowStart(&sender);
     sender.changeState((State *) currentState);
     sender.mainLoop();
-
-
+    
+    cout.rdbuf(x);
+    //fout.close(); 
     freeaddrinfo(serverInfo);
 	/* Send data and receive acknowledgements on s*/
 

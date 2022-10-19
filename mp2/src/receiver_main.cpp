@@ -20,7 +20,7 @@
 #include <unordered_map>
 using namespace std;
 
-#define DATA_BUFFER_SIZE 1024
+#define DATA_BUFFER_SIZE 1450
 #define SEQ_SIZE 4
 #define DATA_LENGTH 4
 
@@ -78,7 +78,7 @@ void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
     //outfile.open(destinationFile);
     //int seqNum, dataLen;
     //char data[DATA_BUFFER_SIZE];
-    char ackNum_char[20];
+    char ackNum_char[40];
 	while(1) { 
         Packet* curPacket = (Packet*) malloc(sizeof(Packet));
         recv_num = recvfrom(sock_fd, recv_buf, sizeof(recv_buf), 0, (struct sockaddr*) &otherAdd, &otherAddLen);  
