@@ -21,7 +21,7 @@
 using namespace std;
 
 #define DATA_BUFFER_SIZE 1024
-#define SEQ_SIZE 4
+#define SEQ_SIZE 8
 #define DATA_LENGTH 4
 
 struct sockaddr_in si_me, si_other;
@@ -33,14 +33,14 @@ void diep(char *s) {
 }
 
 typedef struct {
-    unsigned int seqNum;
+    unsigned long seqNum;
     unsigned int dataLen;
     char data[DATA_BUFFER_SIZE];
 } Packet;
 
 
 void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
-    unordered_map<unsigned int, Packet*> hashMap;
+    unordered_map<long, Packet*> hashMap;
     int sock_fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if(sock_fd < 0)  
     {  
@@ -69,10 +69,10 @@ void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
     struct sockaddr_storage otherAdd;
     socklen_t otherAddLen;
     otherAddLen = sizeof otherAdd;
-    int nextPacketNum = 0;
-    int ackNum = - 1;
+    long nextPacketNum = 0;
+    long ackNum = - 1;
     bool endFlag = false;
-    unsigned int lastSeqNum = 0;
+    long lastSeqNum = 0;
     //ofstream outfile;  
     FILE* fp = fopen(destinationFile, "wb");
     //outfile.open(destinationFile);
@@ -99,7 +99,7 @@ void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
         if (curPacket->seqNum >= nextPacketNum
                 && hashMap.find(curPacket->seqNum) == hashMap.end()) {
             hashMap.insert({curPacket->seqNum, curPacket});
-        }else{free(curPacket);}
+        }
         curPacket = nullptr; 
 
         while(hashMap.find(nextPacketNum) != hashMap.end()){

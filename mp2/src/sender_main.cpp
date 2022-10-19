@@ -49,15 +49,16 @@ void diep(char *s) {
 }
 class Packet {
     private:
-    int id_, content_length_;
+    long id_;
+    int content_length_;
     char content_[CONTENT_SIZE];
     public:
-    Packet(int id, int content_length, char* buf) {
+    Packet(long id, int content_length, char* buf) {
         id_ = id;
         content_length_ = content_length;
         memcpy(content_, buf, CONTENT_SIZE);
     }
-    int id() {
+    long id() {
         return id_;
     }
     void initData(char *buf) {
@@ -78,7 +79,7 @@ class State {
     State();
     State(ReliableSender *sender);
     virtual void dupACK() = 0;
-    virtual void newACK(int ackId) = 0;
+    virtual void newACK(long ackId) = 0;
     void timeout();
     virtual ~State();
 };
@@ -97,25 +98,25 @@ class FastRecovery : State {
     public:
     FastRecovery(ReliableSender *input);
     void dupACK();
-    void newACK(int ackId);
+    void newACK(long ackId);
 };
 class CongestionAvoid : State {
     public:
     CongestionAvoid(ReliableSender *input);
     void dupACK();
-    void newACK(int ackId);
+    void newACK(long ackId);
 };
 class SlowStart : State {
     public:
     SlowStart(ReliableSender *input);
     void dupACK();
-    void newACK(int ackId);
+    void newACK(long ackId);
 };
 
 
 class ReliableSender {
     private:
-    int lastReceivedACKId_;
+    long lastReceivedACKId_;
 
     FILE *fp_;
     unsigned long long remainingBytesToRead_;  // may not equal to size of file
@@ -133,12 +134,7 @@ class ReliableSender {
     deque<Packet> loadNewPacketsFromFile() {
         deque<Packet> new_deq;
         if (isFileExhausted_) return new_deq;
-        int packetIdToAdd;
-        if(sentAndNotAckPacketsQueue.size() == 0){
-            packetIdToAdd=leftPacketId_;
-        }else{
-            packetIdToAdd=sentAndNotAckPacketsQueue.back().id() + 1;
-        }
+        long packetIdToAdd = sentAndNotAckPacketsQueue.size() == 0 ?leftPacketId_ : sentAndNotAckPacketsQueue.back().id() + 1;
         int bytesRead;
         int contentLen;
         int newPacketCount = ((int)ceil(windowSize_)) - sentAndNotAckPacketsQueue.size();
@@ -152,7 +148,7 @@ class ReliableSender {
                 Packet packet(packetIdToAdd++, 0, fileReadBuffer_);
                 new_deq.push_back(move(packet));
                 if (DEBUG_LOAD_PACKET) {
-                    printf("DEBUG: create FIN packet: %d, size: %d\n",
+                    printf("DEBUG: create FIN packet: %ld, size: %ld\n",
                             packet.id(), 0);
                 }
                 isFileExhausted_ = true;
@@ -178,8 +174,8 @@ class ReliableSender {
         return new_deq;
     }
 
-    static int getMaxACKId(char *buffer, int bytesRead) {
-        int MaxACKId = 0,packetId, i = 0;
+    static long getMaxACKId(char *buffer, int bytesRead) {
+        long MaxACKId = 0,packetId, i = 0;
         while (i + PACKET_ID_SIZE<= bytesRead) {
             memcpy(&packetId, buffer+i,  PACKET_ID_SIZE);
             if (packetId >  MaxACKId) {
@@ -194,7 +190,7 @@ class ReliableSender {
     public:
     float windowSize_;
     int ssthresh_;
-    int leftPacketId_;  // the left side of the sliding window, should be the next ACK id
+    long leftPacketId_;  // the left side of the sliding window, should be the next ACK id
     int dupACKCount_;
     long estimatedRTT_;
     long sampleRTT_;
@@ -302,7 +298,7 @@ class ReliableSender {
         return isFileExhausted_ && sentAndNotAckPacketsQueue.size() == 0;
     }
 
-    void deleteACKedPacketsFromWindow(int ackId) {
+    void deleteACKedPacketsFromWindow(long ackId) {
         while (sentAndNotAckPacketsQueue.size() > 0 && sentAndNotAckPacketsQueue[0].id() <= ackId) {
             sentAndNotAckPacketsQueue.pop_front();
         }
@@ -316,7 +312,7 @@ class ReliableSender {
                 case waitACK: break;//get ACK below 
             }
             setSocketTimeout();//set time out
-            int ackId = getACKId();
+            long ackId = getACKId();
             /*record recv time*/
             auto recvPacketTime = chrono::high_resolution_clock::now();
             auto recvPacketTime_nanosec = recvPacketTime.time_since_epoch();
@@ -378,7 +374,7 @@ class ReliableSender {
 
 
 CongestionAvoid::CongestionAvoid(ReliableSender *input) : State(input){}
-void CongestionAvoid::newACK(int ackId) {
+void CongestionAvoid::newACK(long ackId) {
     selfSenderInfo_->dupACKCount_ = 0;
         int step = ackId - selfSenderInfo_->leftPacketId_ + 1;
         while (step-- > 0) {
@@ -403,9 +399,9 @@ void CongestionAvoid::dupACK() {
 
 
 SlowStart::SlowStart(ReliableSender *input) : State(input){}
-void SlowStart::newACK(int ackId) {
+void SlowStart::newACK(long ackId) {
     selfSenderInfo_->dupACKCount_ = 0;
-    int step = ackId - selfSenderInfo_->leftPacketId_ + 1;
+    long step = ackId - selfSenderInfo_->leftPacketId_ + 1;
     selfSenderInfo_->windowSize_ += SLOW_START_INIT_SIZE * step;
     selfSenderInfo_->nextAction_ = sendNew;
     selfSenderInfo_->leftPacketId_ = ackId + 1;
@@ -420,7 +416,7 @@ void SlowStart::dupACK() {
 }
 
 FastRecovery::FastRecovery(ReliableSender *input) : State(input){}
-void FastRecovery::newACK(int ackId) {
+void FastRecovery::newACK(long ackId) {
     selfSenderInfo_->dupACKCount_ = 0;
     selfSenderInfo_->windowSize_ = selfSenderInfo_->ssthresh_;
     selfSenderInfo_->nextAction_ = sendNew;
