@@ -2,7 +2,7 @@
 seconds=$((1800))
 for i in {21..40}
 do
-    python CS_438/auto-code.py $i 
+    python C:/Users/XUMAOJUN/Desktop/CS_438/auto-code.py $i 
     typeset -i version=$(cat version.txt)
 
     printf "\nchanging version from $version to $((version+1))\n\n"
