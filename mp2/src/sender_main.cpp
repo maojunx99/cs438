@@ -393,7 +393,7 @@ void CongestionAvoid::dupACK() {
         selfSenderInfo_->dupACKCount_++;
         selfSenderInfo_->nextAction_ = waitACK;
         if (selfSenderInfo_->dupACKCount_ >= dupACK_threshold) {
-            selfSenderInfo_->ssthresh_ = round(selfSenderInfo_->windowSize_ / 2) + ADD_WINDOW_SIZE_WHEN_HALF;
+            selfSenderInfo_->ssthresh_ = round(selfSenderInfo_->windowSize_ ) + ADD_WINDOW_SIZE_WHEN_HALF;
             selfSenderInfo_->windowSize_ = selfSenderInfo_->ssthresh_ + dupACK_threshold;
             selfSenderInfo_->nextAction_ = resend;
             FastRecovery *fastRecoveryState = new FastRecovery(selfSenderInfo_);
