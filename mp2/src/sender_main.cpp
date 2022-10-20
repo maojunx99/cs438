@@ -392,7 +392,7 @@ void CongestionAvoid::dupACK() {
         selfSenderInfo_->dupACKCount_++;
         selfSenderInfo_->nextAction_ = waitACK;
         if (selfSenderInfo_->dupACKCount_ >= dupACK_threshold) {
-            selfSenderInfo_->ssthresh_ = min(round(selfSenderInfo_->windowSize_ / DIVIDED_TIME_WHEN_TIMEOUT_OR_CONGESTION) + ADD_WINDOW_SIZE_WHEN_HALF,SENDER_BUFFER_SIZE);
+            selfSenderInfo_->ssthresh_ = min(int(round(selfSenderInfo_->windowSize_ / DIVIDED_TIME_WHEN_TIMEOUT_OR_CONGESTION) + ADD_WINDOW_SIZE_WHEN_HALF),SENDER_BUFFER_SIZE);
             selfSenderInfo_->windowSize_ = selfSenderInfo_->ssthresh_ + dupACK_threshold;
             selfSenderInfo_->nextAction_ = resend;
             FastRecovery *fastRecoveryState = new FastRecovery(selfSenderInfo_);
@@ -437,7 +437,7 @@ void FastRecovery::dupACK() {
 void timeoutAction(ReliableSender *selfSenderInfo_) {
     SlowStart *slowStartState = new SlowStart(selfSenderInfo_);
     selfSenderInfo_->changeState((State *) slowStartState);
-    selfSenderInfo_->ssthresh_ = min(round(selfSenderInfo_->windowSize_ / DIVIDED_TIME_WHEN_TIMEOUT_OR_CONGESTION) + ADD_WINDOW_SIZE_WHEN_HALF,SENDER_BUFFER_SIZE);
+    selfSenderInfo_->ssthresh_ = min(int(round(selfSenderInfo_->windowSize_ / DIVIDED_TIME_WHEN_TIMEOUT_OR_CONGESTION) + ADD_WINDOW_SIZE_WHEN_HALF),SENDER_BUFFER_SIZE);
     selfSenderInfo_->windowSize_ = SLOW_START_INIT_SIZE;
     selfSenderInfo_->dupACKCount_ = 0;
     selfSenderInfo_->nextAction_ = resend;
