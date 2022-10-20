@@ -18,11 +18,12 @@
 #include <fstream>
 #include <errno.h>
 #include <unordered_map>
+#include "sender.h"
 using namespace std;
 
-#define DATA_BUFFER_SIZE 1024
-#define SEQ_SIZE 4
-#define DATA_LENGTH 4
+//#define DATA_BUFFER_SIZE 1450
+//#define SEQ_SIZE 4
+//#define DATA_LENGTH 4
 
 struct sockaddr_in si_me, si_other;
 int s, slen;
@@ -33,14 +34,14 @@ void diep(char *s) {
 }
 
 typedef struct {
-    unsigned int seqNum;
+    unsigned long int seqNum;
     unsigned int dataLen;
     char data[DATA_BUFFER_SIZE];
 } Packet;
 
 
 void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
-    unordered_map<unsigned int, Packet*> hashMap;
+    unordered_map<unsigned long int, Packet*> hashMap;
     int sock_fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if(sock_fd < 0)  
     {  
@@ -69,8 +70,8 @@ void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
     struct sockaddr_storage otherAdd;
     socklen_t otherAddLen;
     otherAddLen = sizeof otherAdd;
-    int nextPacketNum = 0;
-    int ackNum = - 1;
+    long int nextPacketNum = 0;
+    long int ackNum = - 1;
     bool endFlag = false;
     unsigned int lastSeqNum = 0;
     //ofstream outfile;  
@@ -78,7 +79,7 @@ void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
     //outfile.open(destinationFile);
     //int seqNum, dataLen;
     //char data[DATA_BUFFER_SIZE];
-    char ackNum_char[40];
+    char ackNum_char[20];
 	while(1) { 
         Packet* curPacket = (Packet*) malloc(sizeof(Packet));
         recv_num = recvfrom(sock_fd, recv_buf, sizeof(recv_buf), 0, (struct sockaddr*) &otherAdd, &otherAddLen);  
@@ -90,6 +91,7 @@ void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
 
         memcpy(curPacket, recv_buf, sizeof(Packet));
         //printf("recvnum=%s",curPacket->data);
+        //printf("recvnum=%s",curPacket->data);
         //printf("recvnum=%u",curPacket->seqNum);
         if (curPacket->dataLen == 0) {
             endFlag = true;
@@ -99,7 +101,9 @@ void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
         if (curPacket->seqNum >= nextPacketNum
                 && hashMap.find(curPacket->seqNum) == hashMap.end()) {
             hashMap.insert({curPacket->seqNum, curPacket});
-        }else{free(curPacket);}
+        }else {
+            free(curPacket);
+        }
         curPacket = nullptr; 
 
         while(hashMap.find(nextPacketNum) != hashMap.end()){

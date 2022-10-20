@@ -49,15 +49,16 @@ void diep(char *s) {
 }
 class Packet {
     private:
-    int id_, content_length_;
+    long id_;
+    int content_length_;
     char content_[CONTENT_SIZE];
     public:
-    Packet(int id, int content_length, char* buf) {
+    Packet(long id, int content_length, char* buf) {
         id_ = id;
         content_length_ = content_length;
         memcpy(content_, buf, CONTENT_SIZE);
     }
-    int id() {
+    long id() {
         return id_;
     }
     void initData(char *buf) {
@@ -69,7 +70,7 @@ class Packet {
 
 class ReliableSender;
 
-void timeoutAction(ReliableSender *sender);
+	void timeoutAction(ReliableSender *sender);
 
 class State {
     protected:
@@ -78,7 +79,7 @@ class State {
     State();
     State(ReliableSender *sender);
     virtual void dupACK() = 0;
-    virtual void newACK(int ackId) = 0;
+    virtual void newACK(long ackId) = 0;
     void timeout();
     virtual ~State();
 };
@@ -97,25 +98,25 @@ class FastRecovery : State {
     public:
     FastRecovery(ReliableSender *input);
     void dupACK();
-    void newACK(int ackId);
+    void newACK(long ackId);
 };
 class CongestionAvoid : State {
     public:
     CongestionAvoid(ReliableSender *input);
     void dupACK();
-    void newACK(int ackId);
+    void newACK(long ackId);
 };
 class SlowStart : State {
     public:
     SlowStart(ReliableSender *input);
     void dupACK();
-    void newACK(int ackId);
+    void newACK(long ackId);
 };
 
 
 class ReliableSender {
     private:
-    int lastReceivedACKId_;
+    long lastReceivedACKId_;
 
     FILE *fp_;
     unsigned long long remainingBytesToRead_;  // may not equal to size of file
@@ -133,12 +134,9 @@ class ReliableSender {
     deque<Packet> loadNewPacketsFromFile() {
         deque<Packet> new_deq;
         if (isFileExhausted_) return new_deq;
-        int packetIdToAdd;
-        if(sentAndNotAckPacketsQueue.size() == 0){
-            packetIdToAdd=leftPacketId_;
-        }else{
-            packetIdToAdd=sentAndNotAckPacketsQueue.back().id() + 1;
-        }
+        //int packetIdToAdd;
+        long packetIdToAdd = sentAndNotAckPacketsQueue.size() == 0 ?
+                leftPacketId_ : sentAndNotAckPacketsQueue.back().id() + 1;
         int bytesRead;
         int contentLen;
         int newPacketCount = ((int)ceil(windowSize_)) - sentAndNotAckPacketsQueue.size();
@@ -152,7 +150,7 @@ class ReliableSender {
                 Packet packet(packetIdToAdd++, 0, fileReadBuffer_);
                 new_deq.push_back(move(packet));
                 if (DEBUG_LOAD_PACKET) {
-                    printf("DEBUG: create FIN packet: %d, size: %d\n",
+                    printf("DEBUG: create FIN packet: %ld, size: %d\n",
                             packet.id(), 0);
                 }
                 isFileExhausted_ = true;
@@ -163,7 +161,7 @@ class ReliableSender {
                     bytesRead : remainingBytesToRead_;
             Packet packet(packetIdToAdd++, contentLen, fileReadBuffer_);
             if (DEBUG_LOAD_PACKET) {
-                printf("DEBUG: create packet: %d, size: %d, bytes read: %d\n",
+                printf("DEBUG: create packet: %ld, size: %d, bytes read: %d\n",
                         packet.id(), contentLen, bytesRead);
             }
             remainingBytesToRead_ = remainingBytesToRead_ <= bytesRead ?
@@ -178,8 +176,9 @@ class ReliableSender {
         return new_deq;
     }
 
-    static int getMaxACKId(char *buffer, int bytesRead) {
-        int MaxACKId = 0,packetId, i = 0;
+    static long int getMaxACKId(char *buffer, int bytesRead) {
+        long MaxACKId = 0,packetId;
+        int i = 0;
         while (i + PACKET_ID_SIZE<= bytesRead) {
             memcpy(&packetId, buffer+i,  PACKET_ID_SIZE);
             if (packetId >  MaxACKId) {
@@ -194,16 +193,16 @@ class ReliableSender {
     public:
     float windowSize_;
     int ssthresh_;
-    int leftPacketId_;  // the left side of the sliding window, should be the next ACK id
+    long leftPacketId_;  // the left side of the sliding window, should be the next ACK id
     int dupACKCount_;
     long estimatedRTT_;
     long sampleRTT_;
     long devRTT_;
     long timeoutVal_nanosec_;
     SenderAction nextAction_;
-    unordered_map<int,long> send_timestamp_;//chrono::high_resolution_clock::time_point
-    unordered_map<int,long> recv_timestamp_;
-    unordered_map<int,long> RTT_timestamp_;
+    unordered_map<long,long> send_timestamp_;//chrono::high_resolution_clock::time_point
+    unordered_map<long,long> recv_timestamp_;
+    unordered_map<long,long> RTT_timestamp_;
     ReliableSender(FILE *fp, unsigned long long numBytesToTransfer, int socket,
             struct addrinfo *receiverInfo) {
         fp_ = fp;
@@ -241,7 +240,7 @@ class ReliableSender {
     int sendOnePacket(Packet *packet) {
         int sentBytes;
         if (DEBUG_PACKET_TRAFFIC) {
-            printf("Now sending packet %d\n", packet->id());
+            printf("Now sending packet %ld\n", packet->id());
         }
         packet->initData(sendBuffer_);
         /*record send time*/
@@ -284,7 +283,7 @@ class ReliableSender {
         }
     }
 
-    int getACKId() {
+    long getACKId() {
         
         int recvBytes = recvfrom(socket_, recvBuffer_, RECV_BUFFER_SIZE, 0, NULL, NULL);
         
@@ -316,7 +315,7 @@ class ReliableSender {
                 case waitACK: break;//get ACK below 
             }
             setSocketTimeout();//set time out
-            int ackId = getACKId();
+            long ackId = getACKId();
             /*record recv time*/
             auto recvPacketTime = chrono::high_resolution_clock::now();
             auto recvPacketTime_nanosec = recvPacketTime.time_since_epoch();
@@ -360,7 +359,7 @@ class ReliableSender {
             
             //timeoutVal_.
             if (DEBUG_LOG) {
-                printf("DEBUG: receive ACK %d\n", ackId);
+                printf("DEBUG: receive ACK %ld\n", ackId);
             }
             // printf("window size= %f\n", windowSize_);
             if (ackId == -1) { // timeout
@@ -378,9 +377,9 @@ class ReliableSender {
 
 
 CongestionAvoid::CongestionAvoid(ReliableSender *input) : State(input){}
-void CongestionAvoid::newACK(int ackId) {
+void CongestionAvoid::newACK(long ackId) {
     selfSenderInfo_->dupACKCount_ = 0;
-        int step = ackId - selfSenderInfo_->leftPacketId_ + 1;
+        long step = ackId - selfSenderInfo_->leftPacketId_ + 1;
         while (step-- > 0) {
             selfSenderInfo_->windowSize_ =
                     selfSenderInfo_->windowSize_ + SLOW_START_INIT_SIZE * 2 * (SLOW_START_INIT_SIZE / floor(selfSenderInfo_->windowSize_));
@@ -393,7 +392,7 @@ void CongestionAvoid::dupACK() {
         selfSenderInfo_->dupACKCount_++;
         selfSenderInfo_->nextAction_ = waitACK;
         if (selfSenderInfo_->dupACKCount_ >= dupACK_threshold) {
-            selfSenderInfo_->ssthresh_ = round(selfSenderInfo_->windowSize_ ) + ADD_WINDOW_SIZE_WHEN_HALF;
+            selfSenderInfo_->ssthresh_ = min(round(selfSenderInfo_->windowSize_ / DIVIDED_TIME_WHEN_TIMEOUT_OR_CONGESTION) + ADD_WINDOW_SIZE_WHEN_HALF,SENDER_BUFFER_SIZE);
             selfSenderInfo_->windowSize_ = selfSenderInfo_->ssthresh_ + dupACK_threshold;
             selfSenderInfo_->nextAction_ = resend;
             FastRecovery *fastRecoveryState = new FastRecovery(selfSenderInfo_);
@@ -403,9 +402,9 @@ void CongestionAvoid::dupACK() {
 
 
 SlowStart::SlowStart(ReliableSender *input) : State(input){}
-void SlowStart::newACK(int ackId) {
+void SlowStart::newACK(long ackId) {
     selfSenderInfo_->dupACKCount_ = 0;
-    int step = ackId - selfSenderInfo_->leftPacketId_ + 1;
+    long step = ackId - selfSenderInfo_->leftPacketId_ + 1;
     selfSenderInfo_->windowSize_ += SLOW_START_INIT_SIZE * step;
     selfSenderInfo_->nextAction_ = sendNew;
     selfSenderInfo_->leftPacketId_ = ackId + 1;
@@ -420,7 +419,7 @@ void SlowStart::dupACK() {
 }
 
 FastRecovery::FastRecovery(ReliableSender *input) : State(input){}
-void FastRecovery::newACK(int ackId) {
+void FastRecovery::newACK(long ackId) {
     selfSenderInfo_->dupACKCount_ = 0;
     selfSenderInfo_->windowSize_ = selfSenderInfo_->ssthresh_;
     selfSenderInfo_->nextAction_ = sendNew;
@@ -438,7 +437,7 @@ void FastRecovery::dupACK() {
 void timeoutAction(ReliableSender *selfSenderInfo_) {
     SlowStart *slowStartState = new SlowStart(selfSenderInfo_);
     selfSenderInfo_->changeState((State *) slowStartState);
-    selfSenderInfo_->ssthresh_ = round(selfSenderInfo_->windowSize_ / 2) + 1;
+    selfSenderInfo_->ssthresh_ = min(round(selfSenderInfo_->windowSize_ / DIVIDED_TIME_WHEN_TIMEOUT_OR_CONGESTION) + ADD_WINDOW_SIZE_WHEN_HALF,SENDER_BUFFER_SIZE);
     selfSenderInfo_->windowSize_ = SLOW_START_INIT_SIZE;
     selfSenderInfo_->dupACKCount_ = 0;
     selfSenderInfo_->nextAction_ = resend;
