@@ -50,10 +50,12 @@ void diep(char *s) {
 class Packet {
     private:
     long id_;
+    int fin_;
     int content_length_;
     char content_[CONTENT_SIZE];
     public:
-    Packet(long id, int content_length, char* buf) {
+    Packet(int fin,long id, int content_length, char* buf) {
+        fin_=fin;
         id_ = id;
         content_length_ = content_length;
         memcpy(content_, buf, CONTENT_SIZE);
@@ -61,10 +63,15 @@ class Packet {
     long id() {
         return id_;
     }
+    int fin() {
+        return fin_;
+    }
     void initData(char *buf) {
+        
         memcpy(buf, &id_, PACKET_ID_SIZE);                   // int, 4 byte
-        memcpy(buf+PACKET_ID_SIZE, &content_length_, CONTENT_LEN_SIZE);        // int, 4 byte
-        memcpy(buf+PACKET_ID_SIZE+CONTENT_LEN_SIZE, content_, CONTENT_SIZE);  // 4088 byte
+        memcpy(buf+PACKET_ID_SIZE, &fin_, 4);   //char 1 byte
+        memcpy(buf+4+PACKET_ID_SIZE, &content_length_, CONTENT_LEN_SIZE);        // int, 4 byte
+        memcpy(buf+4+PACKET_ID_SIZE+CONTENT_LEN_SIZE, content_, CONTENT_SIZE);  // 4088 byte
     }
 };
 
@@ -147,7 +154,8 @@ class ReliableSender {
         while (newPacketCount-- > 0) {
             if (remainingBytesToRead_ == 0) {
                 // to create the FIN packet 
-                Packet packet(packetIdToAdd++, 0, fileReadBuffer_);
+                int fin=1;
+                Packet packet(fin,packetIdToAdd++, 0, fileReadBuffer_);
                 new_deq.push_back(move(packet));
                 if (DEBUG_LOAD_PACKET) {
                     printf("DEBUG: create FIN packet: %ld, size: %d\n",
@@ -159,7 +167,8 @@ class ReliableSender {
             bytesRead = fread(fileReadBuffer_, 1, CONTENT_SIZE, fp_);
             contentLen = remainingBytesToRead_ >= bytesRead ?
                     bytesRead : remainingBytesToRead_;
-            Packet packet(packetIdToAdd++, contentLen, fileReadBuffer_);
+            int fin=0;
+            Packet packet(fin,packetIdToAdd++, contentLen, fileReadBuffer_);
             if (DEBUG_LOAD_PACKET) {
                 printf("DEBUG: create packet: %ld, size: %d, bytes read: %d\n",
                         packet.id(), contentLen, bytesRead);
@@ -179,12 +188,12 @@ class ReliableSender {
     static long int getMaxACKId(char *buffer, int bytesRead) {
         long MaxACKId = 0,packetId;
         int i = 0;
-        while (i + PACKET_ID_SIZE<= bytesRead) {
-            memcpy(&packetId, buffer+i,  PACKET_ID_SIZE);
+        while (i + PACKET_ID_SIZE<= bytesRead) {//PACKET_ID_SIZE
+            memcpy(&packetId, buffer+i,  PACKET_ID_SIZE);//PACKET_ID_SIZE
             if (packetId >  MaxACKId) {
                  MaxACKId = packetId;
             }
-            i += PACKET_ID_SIZE;
+            i += PACKET_ID_SIZE;//PACKET_ID_SIZE
         }
         return  MaxACKId;
     }

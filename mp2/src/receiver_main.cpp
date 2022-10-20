@@ -34,8 +34,8 @@ void diep(char *s) {
 }
 
 typedef struct {
-    // char finalflag;
     unsigned long int seqNum;
+    int finalflag;
     unsigned int dataLen;
     char data[DATA_BUFFER_SIZE];
 } Packet;
@@ -94,7 +94,7 @@ void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
         //printf("recvnum=%s",curPacket->data);
         //printf("recvnum=%s",curPacket->data);
         //printf("recvnum=%u",curPacket->seqNum);
-        if (curPacket->dataLen == 0) {
+        if (curPacket->finalflag==1 || curPacket->dataLen == 0) {
             endFlag = true;
             lastSeqNum = curPacket->seqNum;
         }
@@ -126,9 +126,9 @@ void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
         if(endFlag && lastSeqNum == nextPacketNum-1){
             break;
         }
-        // if(curPacket->finalflag=='1'){
-        //     break;
-        // }
+        /*if(curPacket->finalflag==1){
+            break;
+        }*/
     }
     fclose(fp);
     // Close the file.
