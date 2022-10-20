@@ -49,11 +49,13 @@ void diep(char *s) {
 }
 class Packet {
     private:
+    char fin_;
     long id_;
     int content_length_;
     char content_[CONTENT_SIZE];
     public:
-    Packet(long id, int content_length, char* buf) {
+    Packet(char fin,long id, int content_length, char* buf) {
+        fin_=fin;
         id_ = id;
         content_length_ = content_length;
         memcpy(content_, buf, CONTENT_SIZE);
@@ -61,10 +63,14 @@ class Packet {
     long id() {
         return id_;
     }
+    char fin() {
+        return fin_;
+    }
     void initData(char *buf) {
-        memcpy(buf, &id_, PACKET_ID_SIZE);                   // int, 4 byte
-        memcpy(buf+PACKET_ID_SIZE, &content_length_, CONTENT_LEN_SIZE);        // int, 4 byte
-        memcpy(buf+PACKET_ID_SIZE+CONTENT_LEN_SIZE, content_, CONTENT_SIZE);  // 4088 byte
+        memcpy(buf, &fin_, 1);   //char 1 byte
+        memcpy(buf+1, &id_, PACKET_ID_SIZE);                   // int, 4 byte
+        memcpy(buf+1+PACKET_ID_SIZE, &content_length_, CONTENT_LEN_SIZE);        // int, 4 byte
+        memcpy(buf+1+PACKET_ID_SIZE+CONTENT_LEN_SIZE, content_, CONTENT_SIZE);  // 4088 byte
     }
 };
 
@@ -147,7 +153,8 @@ class ReliableSender {
         while (newPacketCount-- > 0) {
             if (remainingBytesToRead_ == 0) {
                 // to create the FIN packet 
-                Packet packet(packetIdToAdd++, 0, fileReadBuffer_);
+                char fin='1';
+                Packet packet(fin,packetIdToAdd++, 0, fileReadBuffer_);
                 new_deq.push_back(move(packet));
                 if (DEBUG_LOAD_PACKET) {
                     printf("DEBUG: create FIN packet: %ld, size: %d\n",
@@ -159,7 +166,8 @@ class ReliableSender {
             bytesRead = fread(fileReadBuffer_, 1, CONTENT_SIZE, fp_);
             contentLen = remainingBytesToRead_ >= bytesRead ?
                     bytesRead : remainingBytesToRead_;
-            Packet packet(packetIdToAdd++, contentLen, fileReadBuffer_);
+            char fin='0';
+            Packet packet(fin,packetIdToAdd++, contentLen, fileReadBuffer_);
             if (DEBUG_LOAD_PACKET) {
                 printf("DEBUG: create packet: %ld, size: %d, bytes read: %d\n",
                         packet.id(), contentLen, bytesRead);
