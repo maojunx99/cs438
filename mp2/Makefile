@@ -1,5 +1,5 @@
 #If you use threads, add -pthread here.
-COMPILERFLAGS = -o3 -Wall -Wextra -Wno-sign-compare
+COMPILERFLAGS = -g -Wall -Wextra -Wno-sign-compare
 
 #Any libraries you might need linked in.
 #LINKLIBS = -lm
