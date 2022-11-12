@@ -115,12 +115,13 @@ int main(int argc, char** argv) {
     }
     topofile.close();
     readMessage(argv[2]);
-
-    while (! changesfile.eof() )
+    temp.clear();
+    while (getline(changesfile, temp))
     {   
-        changesfile >> a;
-        changesfile >> b;
-        changesfile >> c;
+        int message_len = temp.length();
+		char message[message_len];
+		int start = -1, end = -1;
+		sscanf(temp.c_str(), "%d %d %d", &a, &b, &c);
         n = max(n, max(a, b));
         // printf("%d%d%d", a, b, c);
         // printf("\n");
@@ -168,10 +169,13 @@ int main(int argc, char** argv) {
             return hops;
         }
         int temp = end;
-        while(prev[temp] != start)
+        while(prev[temp] != start && prev[temp] != 0)
         {
             hops.push_back(prev[temp]);
             temp = prev[temp];
+        }
+        if(prev[temp] == 0){
+            return hops;
         }
         hops.push_back(start);
         reverse(hops.begin(), hops.end());
@@ -187,13 +191,19 @@ void linkstate(int start, int prev[])
         memset(dis, 0x3f, sizeof(dis));
         dis[start] = 0;
         vector<int> hops;
+        int ttemp;
         dijkstra(start, 1, prev);
         for(int j = 1; j <= n; j++){
+            if(dis[j] == 1061109567){
+                ttemp = -999;
+            }else{
+                ttemp = dis[j];
+            }
             if(j == start){
-                fprintf(fpout, "%d %d %d\n", j, j, dis[j]);
+                fprintf(fpout, "%d %d %d\n", j, j, ttemp);
                 continue;
             }
-            fprintf(fpout, "%d %d %d\n", j, prev[j], dis[j]);
+            fprintf(fpout, "%d %d %d\n", j, prev[j], ttemp);
         }
 }
 
