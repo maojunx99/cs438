@@ -6,7 +6,7 @@
 #include <fstream>
 #include <queue>
 #include <vector>
-#include <String>
+#include <string>
 using namespace std;
 const int Ni = 10000;
 const int MAX_INTEGER = 1 << 30;
