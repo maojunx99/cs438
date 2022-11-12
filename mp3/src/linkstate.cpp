@@ -7,6 +7,7 @@
 #include <queue>
 #include <vector>
 #include <string>
+#include <algorithm>
 using namespace std;
 const int Ni = 10000;
 const int MAX_INTEGER = 1 << 30;
@@ -38,9 +39,11 @@ vector<node> e[Ni];
 int dis[Ni], n;
 priority_queue<node> q;
 vector<int> linkstate(int start, int end, int prev[]);
-void dijkstra(int end, int prev[]);
+void linkstate(int start, int prev[]);
+void dijkstra(int start, int end, int prev[]);
 void output(int src, int dst, char* message);
 void readMessage(char* messagefile);
+FILE * fpout;
 
 int main(int argc, char** argv) {
     //printf("Number of arguments: %d", argc);
@@ -61,7 +64,7 @@ int main(int argc, char** argv) {
         printf("Unable to open changesfile");
         exit(1); // terminate with error
     }
-
+    fpout = fopen("output.txt", "a");
     int a,b,c,d,f;
     int i=0,j=0;
     string temp;
@@ -74,8 +77,8 @@ int main(int argc, char** argv) {
             if(c <= 0) continue;
             e[a].push_back(node(b, c));
             e[b].push_back(node(a, c));
-            printf("%d%d%d", a, b, c);
-            printf("\n");
+            // printf("%d%d%d", a, b, c);
+            // printf("\n");
 			if (start == -1 || end == -1) {
 				continue;
 			}
@@ -106,6 +109,10 @@ int main(int argc, char** argv) {
     //    index ++;
     // }
     // printf("%d", index);
+    for(int i = 1; i <= n; i++){
+        linkstate(i, prev);
+        memset(prev, 0, sizeof(prev));
+    }
     topofile.close();
     readMessage(argv[2]);
 
@@ -115,17 +122,17 @@ int main(int argc, char** argv) {
         changesfile >> b;
         changesfile >> c;
         n = max(n, max(a, b));
-        printf("%d%d%d", a, b, c);
-        printf("\n");
+        // printf("%d%d%d", a, b, c);
+        // printf("\n");
         for(int i = 0; i < e[a].size(); i++){
             if(e[a][i].vertice == b){
                 e[a].erase(e[a].begin() + i);
             }
         }
         for(int j = 0; j < e[b].size(); j++){
-            printf("%s%d%d\n","e[b]:", e[b][j].vertice, a);
+            // printf("%s%d%d\n","e[b]:", e[b][j].vertice, a);
             if(e[b][j].vertice == a){
-                printf("%s%d\n","index:", j);
+                // printf("%s%d\n","index:", j);
                 e[b].erase(e[b].begin() + j);
             }
         }
@@ -133,14 +140,19 @@ int main(int argc, char** argv) {
             e[a].push_back(node(b, c));
             e[b].push_back(node(a, c));
         }
-        for(node nn : e[a]){
-            printf("%s%d\n","e[a]:", nn.vertice);
+        for(int i = 1; i <= n; i++){
+        linkstate(i, prev);
+        memset(prev, 0, sizeof(prev));
         }
-        for(node nn : e[b]){
-            printf("%s%d\n","e[b]:", nn.vertice);
-        }
+        // for(node nn : e[a]){
+        //     printf("%s%d\n","e[a]:", nn.vertice);
+        // }
+        // for(node nn : e[b]){
+        //     printf("%s%d\n","e[b]:", nn.vertice);
+        // }
         readMessage(argv[2]);
     }
+    fclose(fpout);
     return 0;
 }
     vector<int> linkstate(int start, int end, int prev[])
@@ -148,10 +160,9 @@ int main(int argc, char** argv) {
         memset(dis, 0x3f, sizeof(dis));
         dis[start] = 0;
         vector<int> hops;
-        q.push(node(start, dis[start]));
+    
 
-        dijkstra(end, prev);
-
+        dijkstra(start, end, prev);
         if(prev[end == 0])
         {
             return hops;
@@ -163,6 +174,7 @@ int main(int argc, char** argv) {
             temp = prev[temp];
         }
         hops.push_back(start);
+        reverse(hops.begin(), hops.end());
         return hops;
         // for (int i = 1; i <= n; i++)
         // {
@@ -170,42 +182,58 @@ int main(int argc, char** argv) {
         // }
 }
 
-void dijkstra(int end, int prev[])
+void linkstate(int start, int prev[])
 {
+        memset(dis, 0x3f, sizeof(dis));
+        dis[start] = 0;
+        vector<int> hops;
+        dijkstra(start, 1, prev);
+        for(int j = 1; j <= n; j++){
+            if(j == start){
+                fprintf(fpout, "%d %d %d\n", j, j, dis[j]);
+                continue;
+            }
+            fprintf(fpout, "%d %d %d\n", j, prev[j], dis[j]);
+        }
+}
+
+void dijkstra(int start, int end, int prev[])
+{   
+    q.push(node(start, dis[start]));
     while (!q.empty())
     {
         node x = q.top();
-        if(x.vertice == end)
-        {
-            break;
-        }
+        q.pop();
         if(x.cost > dis[x.vertice])
         {
+            // printf("%s%d", "continue:", x.vertice);
             continue;
         }
-        q.pop();
+        // printf("%d", x.vertice);
         for (int i = 0; i < e[x.vertice].size(); i++)
         {
             node y = e[x.vertice][i];
             if (dis[y.vertice] > dis[x.vertice] + y.cost)
-            {
+            {   
                 dis[y.vertice] = dis[x.vertice] + y.cost;
                 q.push(node(y.vertice, dis[y.vertice]));
+                // printf("%s%d", "y:", y.vertice);
                 prev[y.vertice] = x.vertice;
             }else if(dis[y.vertice] == dis[x.vertice] + y.cost && prev[y.vertice] > x.vertice)
             {
                 prev[y.vertice] = x.vertice;
             }
         }
+        // printf("\n");
     }
     priority_queue <node> empty;
     swap(empty,q);
 }
 
 void output(int start, int end, char* message) {
-	FILE * fpout;
+	// FILE * fpout;
 
-	fpout = fopen("output.txt", "a");
+	// fpout = fopen("output.txt", "a");
 
 	// if (f_tables[src][dst].second == INT_MAX || 
 	// 	all_nodes.count(src) <= 0 ||
@@ -231,8 +259,8 @@ void output(int start, int end, char* message) {
 		fprintf(fpout, " ");
 	}
 	fprintf(fpout, "message %s\n", message);
-	fprintf(fpout, "\n");
-	fclose(fpout);
+	// fprintf(fpout, "\n");
+	// fclose(fpout);
 }
 
 void readMessage(char* messagefile) {
@@ -250,8 +278,8 @@ void readMessage(char* messagefile) {
 			if (start == -1 || end == -1) {
 				continue;
 			}
-			printf("start: %d end: %d ", start, end);
-			printf("message: %s\n", message);
+			// printf("start: %d end: %d ", start, end);
+			// printf("message: %s\n", message);
 			output(start, end, message);
 		}
 		in.close();
