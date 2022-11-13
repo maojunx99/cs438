@@ -297,8 +297,8 @@ void readMessage(char* messagefile) {
 			// printf("start: %d end: %d ", start, end);
 			// printf("message: %s\n", message);
 			output(start, end, message);
+            fprintf(fpout, "\n");
 		}
-        fprintf(fpout, "\n");
 		in.close();
 	} else {
 		exit(2);
