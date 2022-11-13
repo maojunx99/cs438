@@ -203,6 +203,9 @@ void linkstate(int start, int prev[])
                 fprintf(fpout, "%d %d %d\n", j, j, ttemp);
                 continue;
             }
+            if(ttemp <= 0){
+                continue;
+            }
             int temp = j;
             while(prev[temp] != start && prev[temp] != 0)
             {
