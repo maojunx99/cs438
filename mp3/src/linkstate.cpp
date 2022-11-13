@@ -142,8 +142,8 @@ int main(int argc, char** argv) {
             e[b].push_back(node(a, c));
         }
         for(int i = 1; i <= n; i++){
-        linkstate(i, prev);
-        memset(prev, 0, sizeof(prev));
+            linkstate(i, prev);
+            memset(prev, 0, sizeof(prev));
         }
         // for(node nn : e[a]){
         //     printf("%s%d\n","e[a]:", nn.vertice);
@@ -203,8 +203,14 @@ void linkstate(int start, int prev[])
                 fprintf(fpout, "%d %d %d\n", j, j, ttemp);
                 continue;
             }
-            fprintf(fpout, "%d %d %d\n", j, prev[j], ttemp);
+            int temp = j;
+            while(prev[temp] != start && prev[temp] != 0)
+            {
+                temp = prev[temp];
+            }
+            fprintf(fpout, "%d %d %d\n", j, temp, ttemp);
         }
+        fprintf(fpout, "\n");
 }
 
 void dijkstra(int start, int end, int prev[])
@@ -292,6 +298,7 @@ void readMessage(char* messagefile) {
 			// printf("message: %s\n", message);
 			output(start, end, message);
 		}
+        fprintf(fpout, "\n");
 		in.close();
 	} else {
 		exit(2);
