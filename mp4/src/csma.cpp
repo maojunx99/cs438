@@ -20,7 +20,6 @@ int maxrandomRange;
 double totalTime;
 double usageTime;
 bool isOccupied;
-vector<int> countdown;
 vector<int> randomList;
 
 void parseInput(char* path){
@@ -63,6 +62,8 @@ int random(int id, int count){
 }
 
 void simulation(){
+    vector<int> countdown;
+    randomList.clear();
     for(int i = 0; i < nodesNum; i ++){
         randomList.push_back(randomRange);
         int r = random(i, 0);
@@ -70,10 +71,10 @@ void simulation(){
     }
     int rounds = 0;
     while(rounds < totalTime){
-        for(int i = 0; i < nodesNum; i ++){
-            cout<<countdown[i]<<" ";
-        }
-        cout<<endl;
+        // for(int i = 0; i < nodesNum; i ++){
+        //     cout<<countdown[i]<<" ";
+        // }
+        // cout<<endl;
         int min = INT16_MAX;
         vector<int> minNumList;
         for(int j = 0; j < nodesNum; j ++){
@@ -97,9 +98,9 @@ void simulation(){
                 }
                 rounds += pktSize;
                 //reset the backup value and random nmbuer range after transmittion
-                countdown[minNumList[0]] = random(minNumList[0], rounds);
-                cout<<minNumList[0]<<" "<<randomList[minNumList[0]]<<" "<<rounds<<endl;
-                //randomList[minNumList[0]] = randomRange;
+                randomList[minNumList[0]] = randomRange;
+                countdown[minNumList[0]] = random(minNumList[0], rounds);     
+                //cout<<minNumList[0]<<" "<<randomList[minNumList[0]]<<" "<<rounds<<endl;
                 continue;
             }
             for(int l : minNumList){
