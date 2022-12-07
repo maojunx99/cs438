@@ -86,8 +86,12 @@ void simulation(){
             }
         }else if(min == 0){
             if(minNumList.size() == 1){
+                if(rounds + pktSize -1 >= totalTime){
+                    usageTime += (totalTime - rounds);
+                }else{
+                    usageTime += pktSize;
+                }
                 rounds += pktSize;
-                usageTime += (pktSize + 1);
                 //reset the backup value and random nmbuer range after transmittion
                 countdown[minNumList[0]] = random(minNumList[0], rounds);
                 randomList[minNumList[0]] = randomRange;
@@ -117,6 +121,7 @@ int main(int argc, char** argv) {
     simulation();
     FILE *fpOut;
     fpOut = fopen("output.txt", "w");
+    cout<<usageTime/totalTime<<endl;
     fprintf(fpOut, "%.2f\n", usageTime/totalTime);
     fclose(fpOut);
     return 0;
