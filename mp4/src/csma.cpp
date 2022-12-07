@@ -87,11 +87,14 @@ void simulation(){
         }else if(min == 0){
             if(minNumList.size() == 1){
                 rounds += pktSize;
-                usageTime += pktSize;
+                usageTime += (pktSize + 1);
+                //reset the backup value and random nmbuer range after transmittion
                 countdown[minNumList[0]] = random(minNumList[0], rounds);
+                randomList[minNumList[0]] = randomRange;
                 continue;
             }
             for(int l : minNumList){
+                //when collision number is equal to max attempt, reset to minimunm
                 if(randomList[l] == maxrandomRange){
                     randomList[l] = randomRange;
                 }else{
