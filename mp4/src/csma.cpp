@@ -70,6 +70,10 @@ void simulation(){
     }
     int rounds = 0;
     while(rounds < totalTime){
+        for(int i = 0; i < nodesNum; i ++){
+            cout<<countdown[i]<<" ";
+        }
+        cout<<endl;
         int min = INT16_MAX;
         vector<int> minNumList;
         for(int j = 0; j < nodesNum; j ++){
@@ -94,7 +98,8 @@ void simulation(){
                 rounds += pktSize;
                 //reset the backup value and random nmbuer range after transmittion
                 countdown[minNumList[0]] = random(minNumList[0], rounds);
-                randomList[minNumList[0]] = randomRange;
+                cout<<minNumList[0]<<" "<<randomList[minNumList[0]]<<" "<<rounds<<endl;
+                //randomList[minNumList[0]] = randomRange;
                 continue;
             }
             for(int l : minNumList){
